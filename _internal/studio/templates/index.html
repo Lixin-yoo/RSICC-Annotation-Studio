@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="studio-token" content="{{ token }}">
+  <title>RSICC Annotation Studio</title>
+  <link rel="icon" href="/static/app.ico"><link rel="stylesheet" href="/static/studio.css">
+  <script defer src="/static/lucide.min.js"></script><script defer src="/static/studio.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="brand-icon"><i data-lucide="scan-eye"></i></span><div><strong>RSICC <span>Annotation Studio</span></strong><small>遥感影像变化描述标注</small></div></div>
+  <div class="top-actions"><span class="local"><span class="dot"></span>本地工作区</span>
+    <button id="importButton"><i data-lucide="file-input"></i>导入标注</button>
+    <button id="exportButton"><i data-lucide="download"></i>导出</button>
+    <button id="helpButton" class="icon" title="快捷键与帮助" aria-label="快捷键与帮助"><i data-lucide="circle-help"></i></button>
+    <button id="settingsButton" class="icon" title="设置" aria-label="设置"><i data-lucide="settings-2"></i></button>
+  </div>
+</header>
+<div id="notice" role="alert" hidden><span></span><button class="icon" aria-label="关闭提示">×</button></div>
+<main class="workspace">
+  <aside class="sidebar">
+    <div class="section-heading"><h2>标注任务</h2><button id="rescan" class="icon" title="重新扫描" aria-label="重新扫描"><i data-lucide="refresh-cw"></i></button></div>
+    <div class="progress-summary"><strong id="countSaved">0</strong><span> / <span id="countTotal">0</span> 已保存</span></div>
+    <progress id="progress" max="1" value="0"></progress>
+    <div id="counts" class="counts">待标注 0 · 待检查 0</div>
+    <label class="search"><i data-lucide="search"></i><input id="search" placeholder="搜索样本文件名" aria-label="搜索样本文件名"></label>
+    <div class="filters"><select id="splitFilter" aria-label="划分筛选"><option value="all">全部划分</option><option>train</option><option>val</option><option>test</option></select>
+      <select id="statusFilter" aria-label="状态筛选"><option value="all">全部状态</option><option value="unannotated">未标注</option><option value="review">待检查 / 草稿</option><option value="saved">已保存</option><option value="checked">已核对</option><option value="missing">缺失文件</option></select></div>
+    <div id="taskList" class="task-list" aria-label="样本列表"></div>
+    <div class="list-pagination"><button id="pagePrev" class="icon" title="上一页" aria-label="上一页"><i data-lucide="chevron-left"></i></button><span id="pageLabel">0 / 0</span><button id="pageNext" class="icon" title="下一页" aria-label="下一页"><i data-lucide="chevron-right"></i></button></div>
+    <button id="nextIncomplete" class="wide"><i data-lucide="list-filter"></i>定位未完成</button>
+    <button id="uploadButton" class="wide secondary"><i data-lucide="images"></i>添加影像对</button>
+  </aside>
+  <section class="viewer-area">
+    <div class="sample-heading"><div><h1 id="sampleName">请选择数据集</h1><div id="sampleMeta" class="muted">尚未载入样本</div></div><span id="saveState" class="badge">未载入</span></div>
+    <div class="image-toolbar"><div class="toolbar-group"><button id="previous" class="icon" title="上一条 Alt+←" aria-label="上一条"><i data-lucide="chevron-left"></i></button><button id="next" class="icon" title="下一条 Alt+→" aria-label="下一条"><i data-lucide="chevron-right"></i></button></div>
+      <div class="toolbar-group"><button id="zoomOut" class="icon" title="缩小" aria-label="缩小"><i data-lucide="zoom-out"></i></button><output id="zoomLevel">100%</output><button id="zoomIn" class="icon" title="放大" aria-label="放大"><i data-lucide="zoom-in"></i></button><button id="fit" class="icon" title="适应窗口 F" aria-label="适应窗口"><i data-lucide="maximize"></i></button></div>
+      <label class="check"><input type="checkbox" id="sync" checked>同步定位</label><label class="check"><input type="checkbox" id="showMask" checked>掩膜</label>
+    </div>
+    <div id="imageGrid" class="image-grid">
+      <section class="image-pane"><header><span><b>A</b> <span id="timeA">Time 1</span></span><small>前时相</small></header><div class="canvas-wrap"><canvas id="canvasA" aria-label="前时相影像"></canvas><span class="image-message" id="messageA">未加载影像</span></div></section>
+      <section class="image-pane"><header><span><b>B</b> <span id="timeB">Time 2</span></span><small>后时相</small></header><div class="canvas-wrap"><canvas id="canvasB" aria-label="后时相影像"></canvas><span class="image-message" id="messageB">未加载影像</span></div></section>
+      <section class="image-pane mask-pane"><header><span><b>M</b> Change mask</span><small>变化掩膜</small></header><div class="canvas-wrap"><canvas id="canvaslabel" aria-label="变化掩膜"></canvas><span class="image-message" id="messagelabel">未加载影像</span></div></section>
+    </div>
+    <footer class="viewer-footer"><span id="imageInfo">—</span><button id="historyButton" class="subtle"><i data-lucide="history"></i>版本历史</button></footer>
+  </section>
+  <section class="editor">
+    <div class="section-heading"><h2>变化描述</h2><span class="pill" id="filled">0 / 5</span></div>
+    <div class="editor-scroll" id="editorFields">
+      <label class="field">场景类别<select id="scene"><option>建筑变化</option><option>滑坡监测</option><option>城市场景演化</option><option>乡村土地开发</option><option>土地利用变化</option><option>其他</option></select></label>
+      <fieldset class="change-switch"><legend>变化状态</legend><label><input type="radio" name="flag" value="1">有变化</label><label><input type="radio" name="flag" value="0">无变化</label><button id="noChange" type="button" title="填入五条无变化描述">填入无变化描述</button></fieldset>
+      <div id="captions"></div>
+      <label class="check review-check"><input type="checkbox" id="reviewed">已核对影像与五条描述</label>
+      <div id="validation" class="validation" role="status"></div>
+    </div>
+    <footer class="editor-actions"><button id="restore" title="恢复到最近一次正式保存"><i data-lucide="rotate-ccw"></i>恢复</button><button id="save" class="primary"><i data-lucide="save"></i>检查并保存</button></footer>
+  </section>
+</main>
+<dialog id="settingsDialog"><form id="settingsForm">
+  <div class="dialog-heading"><h2>工作区设置</h2><button type="button" data-close class="icon" aria-label="关闭设置">×</button></div>
+  <label class="field">数据集目录<div class="path-field"><input id="cfgDataset" required placeholder="包含 train / val / test 的根目录"><button type="button" data-browse="cfgDataset" title="浏览数据集目录"><i data-lucide="folder-open"></i></button></div></label>
+  <label class="field">标注保存目录<div class="path-field"><input id="cfgOutput" required><button type="button" data-browse="cfgOutput" title="浏览保存目录"><i data-lucide="folder-open"></i></button></div></label>
+  <div class="settings-grid">
+    <label class="field">自动保存草稿（秒）<input id="cfgAutosave" type="number" min="2" max="300" required></label>
+    <label class="field">界面字号<input id="cfgFont" type="number" min="12" max="20" required></label>
+    <label class="field">主题<select id="cfgTheme"><option value="light">浅色</option><option value="dark">深色</option></select></label>
+    <label class="field">默认导出格式<select id="cfgExport"><option value="json">JSON（原格式）</option><option value="csv">CSV（逐句）</option></select></label>
+    <label class="field">前时相名称 / 日期<input id="cfgTimeA"></label><label class="field">后时相名称 / 日期<input id="cfgTimeB"></label>
+    <label class="check"><input id="cfgSync" type="checkbox">默认同步定位</label><label class="check"><input id="cfgMask" type="checkbox">默认显示掩膜</label>
+  </div>
+  <p class="muted settings-note">JSON 保存在所选目录；草稿与版本历史保存在同目录的 recovery.sqlite3。原始影像不会被改写。</p>
+  <div id="settingsError" class="validation"></div><footer><button type="button" id="repairIds">修复重复句子编号</button><button type="button" data-close>取消</button><button class="primary" type="submit">应用设置</button></footer>
+</form></dialog>
+<dialog id="importDialog"><div class="dialog-heading"><h2>导入现有标注</h2><button data-close class="icon" aria-label="关闭导入">×</button></div><label class="field">JSON 文件<div class="path-field"><input id="importPath"><button data-browse="importPath" data-kind="json" title="选择 JSON 文件"><i data-lucide="folder-open"></i></button></div></label><p class="muted">仅允许导入到空工作区。保留已有编号、原文、tokens 和附加字段，不修改来源文件。</p><footer><button id="doImport" class="primary">验证并导入</button></footer></dialog>
+<dialog id="historyDialog"><div class="dialog-heading"><h2>已保存版本</h2><button data-close class="icon" aria-label="关闭历史">×</button></div><div id="historyList"></div></dialog>
+<dialog id="uploadDialog"><form id="uploadForm"><div class="dialog-heading"><h2>添加影像对</h2><button type="button" data-close class="icon" aria-label="关闭添加影像">×</button></div><label class="field">样本文件名<input name="filename" required placeholder="例如 train_new_0001.png"></label><label class="field">数据划分<select name="split"><option>train</option><option>val</option><option>test</option></select></label><label class="field">前时相 A<input name="A" type="file" accept=".png,.jpg,.jpeg,.tif,.tiff,.bmp" required></label><label class="field">后时相 B<input name="B" type="file" accept=".png,.jpg,.jpeg,.tif,.tiff,.bmp" required></label><label class="field">变化掩膜<input name="label" type="file" accept=".png,.jpg,.jpeg,.tif,.tiff,.bmp" required></label><footer><button type="submit" class="primary">添加到数据集</button></footer></form></dialog>
+<dialog id="helpDialog"><div class="dialog-heading"><h2>快捷键与数据安全</h2><button data-close class="icon" aria-label="关闭帮助">×</button></div><dl><dt>Ctrl + S</dt><dd>检查并正式保存</dd><dt>Alt + ← / →</dt><dd>上一条 / 下一条</dd><dt>Ctrl + Enter</dt><dd>保存并前往下一条</dd><dt>Ctrl + Z / Y</dt><dd>文本框内撤销 / 重做</dd><dt>F</dt><dd>适应窗口（输入文字时不触发）</dd><dt>滚轮 / 拖动</dt><dd>缩放 / 平移；开启同步后关联三幅影像</dd></dl><p>自动保存保留恢复草稿，不会把空描述填成“无变化”。正式保存需要五条非空、互不重复的描述。</p><p>JSON 导出保持原始结构；CSV 逐句导出不包含 tokens。导出不包含未正式保存的草稿。最近 30 个完整 JSON 备份保留在 backups 目录。</p><p>这是单机单写入者工作区。团队成员应使用独立保存目录，勿通过网络盘同时修改同一份 JSON。</p></dialog>
+<div id="toast" role="status" hidden></div>
+</body></html>
